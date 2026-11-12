@@ -1,0 +1,6 @@
+{
+  "name": "TypePro",
+  "description": "Bilingual English & Hindi typing tutor with lessons, timed tests, games, virtual keyboard, and cloud-synced progress reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

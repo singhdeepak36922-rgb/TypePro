@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">TypePro</string>
+    <string name="cd_typepro_logo">TypePro Logo</string>
+    <string name="auth_subtitle">Bilingual Touch Typing &amp; Speed Studio</string>
+    <string name="auth_headline">Sign in to sync your typing progress</string>
+    <string name="auth_description">Track WPM, accuracy, weak keys, daily streaks, Hindi typing drills, and game high scores across your devices.</string>
+    <string name="sign_in_with_google">Continue with Google</string>
+</resources>

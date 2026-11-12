@@ -1,0 +1,134 @@
+{
+  "entities": {
+    "UserProfileSettings": {
+      "title": "UserProfileSettings",
+      "description": "Authenticated user's display profile and typing preferences.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Firebase Auth UID of the owner." },
+        "displayName": { "type": "string", "description": "User display name." },
+        "theme": { "type": "string", "enum": ["dark", "light", "system"] },
+        "language": { "type": "string", "enum": ["en", "hi"] },
+        "soundEnabled": { "type": "boolean" },
+        "cursorStyle": { "type": "string", "enum": ["line", "block", "underline"] },
+        "keyboardLayout": { "type": "string", "enum": ["qwerty", "inscript"] },
+        "defaultDuration": { "type": "integer", "description": "Default test duration in seconds." },
+        "defaultCategory": { "type": "string", "description": "Default test category slug." },
+        "dailyGoalMinutes": { "type": "integer", "description": "Daily practice goal in minutes." },
+        "showKeyboard": { "type": "boolean" },
+        "strictMode": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server timestamp on update." }
+      },
+      "required": [
+        "userId",
+        "displayName",
+        "theme",
+        "language",
+        "soundEnabled",
+        "cursorStyle",
+        "keyboardLayout",
+        "defaultDuration",
+        "defaultCategory",
+        "dailyGoalMinutes",
+        "showKeyboard",
+        "strictMode",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "TypingResult": {
+      "title": "TypingResult",
+      "description": "Completed typing test, lesson, practice, Hindi session, or game result.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "mode": { "type": "string", "enum": ["test", "practice", "lesson", "game", "hindi", "drill"] },
+        "refId": { "type": "string", "description": "Lesson, passage, or game slug." },
+        "refTitle": { "type": "string", "description": "Human-readable session title." },
+        "language": { "type": "string", "enum": ["en", "hi"] },
+        "durationSeconds": { "type": "integer" },
+        "elapsedSeconds": { "type": "integer" },
+        "grossWpm": { "type": "number" },
+        "netWpm": { "type": "number" },
+        "standardWpm": { "type": "number" },
+        "accuracy": { "type": "number" },
+        "errors": { "type": "integer" },
+        "totalTyped": { "type": "integer" },
+        "correctChars": { "type": "integer" },
+        "keystrokeErrors": { "type": "integer" },
+        "backspaceCount": { "type": "integer" },
+        "score": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server timestamp on creation." }
+      },
+      "required": [
+        "userId",
+        "mode",
+        "refId",
+        "refTitle",
+        "language",
+        "durationSeconds",
+        "elapsedSeconds",
+        "grossWpm",
+        "netWpm",
+        "standardWpm",
+        "accuracy",
+        "errors",
+        "totalTyped",
+        "correctChars",
+        "keystrokeErrors",
+        "backspaceCount",
+        "score",
+        "createdAt"
+      ]
+    },
+    "KeyStat": {
+      "title": "KeyStat",
+      "description": "Per-character accuracy counters for weak-key diagnostics.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "keyChar": { "type": "string", "description": "Character or grapheme." },
+        "correct": { "type": "integer" },
+        "incorrect": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "keyChar", "correct", "incorrect", "createdAt", "updatedAt"]
+    },
+    "LessonProgress": {
+      "title": "LessonProgress",
+      "description": "Per-lesson completion and personal best metrics.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Owner Firebase Auth UID." },
+        "lessonSlug": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "bestWpm": { "type": "number" },
+        "bestAccuracy": { "type": "number" },
+        "attempts": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "lessonSlug", "completed", "bestWpm", "bestAccuracy", "attempts", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfileSettings" },
+      "description": "Owner-only user profile and typing preferences."
+    },
+    "/users/{userId}/results/{resultId}": {
+      "schema": { "$ref": "#/entities/TypingResult" },
+      "description": "Owner-only history of completed typing sessions."
+    },
+    "/users/{userId}/keyStats/{keyId}": {
+      "schema": { "$ref": "#/entities/KeyStat" },
+      "description": "Owner-only per-key accuracy counts."
+    },
+    "/users/{userId}/lessonProgress/{lessonSlug}": {
+      "schema": { "$ref": "#/entities/LessonProgress" },
+      "description": "Owner-only progress records for structured lessons."
+    }
+  }
+}

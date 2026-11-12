@@ -1,0 +1,186 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidUserProfileSettings(data, userId) {
+      return data.userId == userId
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 80
+        && data.theme in ['dark', 'light', 'system']
+        && data.language in ['en', 'hi']
+        && data.soundEnabled is bool
+        && data.cursorStyle in ['line', 'block', 'underline']
+        && data.keyboardLayout in ['qwerty', 'inscript']
+        && data.defaultDuration is int && data.defaultDuration in [60, 120, 180, 300, 600, 900]
+        && data.defaultCategory is string && data.defaultCategory.size() >= 1 && data.defaultCategory.size() <= 40
+        && data.dailyGoalMinutes is int && data.dailyGoalMinutes >= 5 && data.dailyGoalMinutes <= 120
+        && data.showKeyboard is bool
+        && data.strictMode is bool
+        && data.createdAt is timestamp && data.createdAt <= request.time
+        && data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidTypingResult(data, userId) {
+      return data.userId == userId
+        && data.mode in ['test', 'practice', 'lesson', 'game', 'hindi', 'drill']
+        && data.refId is string && data.refId.size() <= 120
+        && data.refTitle is string && data.refTitle.size() >= 1 && data.refTitle.size() <= 120
+        && data.language in ['en', 'hi']
+        && data.durationSeconds is int && data.durationSeconds >= 0 && data.durationSeconds <= 3600
+        && data.elapsedSeconds is int && data.elapsedSeconds >= 0 && data.elapsedSeconds <= 7200
+        && data.grossWpm is number && data.grossWpm >= 0 && data.grossWpm <= 500
+        && data.netWpm is number && data.netWpm >= 0 && data.netWpm <= 500
+        && data.standardWpm is number && data.standardWpm >= 0 && data.standardWpm <= 500
+        && data.accuracy is number && data.accuracy >= 0 && data.accuracy <= 100
+        && data.errors is int && data.errors >= 0 && data.errors <= 100000
+        && data.totalTyped is int && data.totalTyped >= 0 && data.totalTyped <= 100000
+        && data.correctChars is int && data.correctChars >= 0 && data.correctChars <= 100000
+        && data.keystrokeErrors is int && data.keystrokeErrors >= 0 && data.keystrokeErrors <= 100000
+        && data.backspaceCount is int && data.backspaceCount >= 0 && data.backspaceCount <= 100000
+        && data.score is int && data.score >= 0 && data.score <= 1000000
+        && data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidKeyStat(data, userId) {
+      return data.userId == userId
+        && data.keyChar is string && data.keyChar.size() >= 1 && data.keyChar.size() <= 16
+        && data.correct is int && data.correct >= 0 && data.correct <= 10000000
+        && data.incorrect is int && data.incorrect >= 0 && data.incorrect <= 10000000
+        && data.createdAt is timestamp && data.createdAt <= request.time
+        && data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidLessonProgress(data, userId, lessonSlug) {
+      return data.userId == userId
+        && data.lessonSlug == lessonSlug
+        && data.completed is bool
+        && data.bestWpm is number && data.bestWpm >= 0 && data.bestWpm <= 500
+        && data.bestAccuracy is number && data.bestAccuracy >= 0 && data.bestAccuracy <= 100
+        && data.attempts is int && data.attempts >= 1 && data.attempts <= 100000
+        && data.createdAt is timestamp && data.createdAt <= request.time
+        && data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && incoming().keys().hasAll([
+          'userId', 'displayName', 'theme', 'language', 'soundEnabled', 'cursorStyle',
+          'keyboardLayout', 'defaultDuration', 'defaultCategory', 'dailyGoalMinutes',
+          'showKeyboard', 'strictMode', 'createdAt', 'updatedAt'
+        ])
+        && incoming().keys().hasOnly([
+          'userId', 'displayName', 'theme', 'language', 'soundEnabled', 'cursorStyle',
+          'keyboardLayout', 'defaultDuration', 'defaultCategory', 'dailyGoalMinutes',
+          'showKeyboard', 'strictMode', 'createdAt', 'updatedAt'
+        ])
+        && isValidUserProfileSettings(incoming(), userId);
+
+      allow update: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfileSettings(incoming(), userId)
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'theme', 'language', 'soundEnabled', 'cursorStyle',
+          'keyboardLayout', 'defaultDuration', 'defaultCategory', 'dailyGoalMinutes',
+          'showKeyboard', 'strictMode', 'updatedAt'
+        ]);
+
+      allow delete: if isOwner(userId) && isValidId(userId);
+
+      match /results/{resultId} {
+        allow get: if isOwner(userId) && isValidId(resultId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId)
+          && isValidId(resultId)
+          && incoming().keys().hasAll([
+            'userId', 'mode', 'refId', 'refTitle', 'language', 'durationSeconds',
+            'elapsedSeconds', 'grossWpm', 'netWpm', 'standardWpm', 'accuracy',
+            'errors', 'totalTyped', 'correctChars', 'keystrokeErrors', 'backspaceCount',
+            'score', 'createdAt'
+          ])
+          && incoming().keys().hasOnly([
+            'userId', 'mode', 'refId', 'refTitle', 'language', 'durationSeconds',
+            'elapsedSeconds', 'grossWpm', 'netWpm', 'standardWpm', 'accuracy',
+            'errors', 'totalTyped', 'correctChars', 'keystrokeErrors', 'backspaceCount',
+            'score', 'createdAt'
+          ])
+          && isValidTypingResult(incoming(), userId);
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(resultId);
+      }
+
+      match /keyStats/{keyId} {
+        allow get: if isOwner(userId) && isValidId(keyId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId)
+          && isValidId(keyId)
+          && incoming().keys().hasAll(['userId', 'keyChar', 'correct', 'incorrect', 'createdAt', 'updatedAt'])
+          && incoming().keys().hasOnly(['userId', 'keyChar', 'correct', 'incorrect', 'createdAt', 'updatedAt'])
+          && isValidKeyStat(incoming(), userId);
+
+        allow update: if isOwner(userId)
+          && isValidId(keyId)
+          && isValidKeyStat(incoming(), userId)
+          && incoming().userId == existing().userId
+          && incoming().keyChar == existing().keyChar
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['correct', 'incorrect', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(keyId);
+      }
+
+      match /lessonProgress/{lessonSlug} {
+        allow get: if isOwner(userId) && isValidId(lessonSlug);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId)
+          && isValidId(lessonSlug)
+          && incoming().keys().hasAll(['userId', 'lessonSlug', 'completed', 'bestWpm', 'bestAccuracy', 'attempts', 'createdAt', 'updatedAt'])
+          && incoming().keys().hasOnly(['userId', 'lessonSlug', 'completed', 'bestWpm', 'bestAccuracy', 'attempts', 'createdAt', 'updatedAt'])
+          && isValidLessonProgress(incoming(), userId, lessonSlug);
+
+        allow update: if isOwner(userId)
+          && isValidId(lessonSlug)
+          && isValidLessonProgress(incoming(), userId, lessonSlug)
+          && incoming().userId == existing().userId
+          && incoming().lessonSlug == existing().lessonSlug
+          && incoming().createdAt == existing().createdAt
+          && incoming().diff(existing()).affectedKeys().hasOnly(['completed', 'bestWpm', 'bestAccuracy', 'attempts', 'updatedAt']);
+
+        allow delete: if isOwner(userId) && isValidId(lessonSlug);
+      }
+    }
+  }
+}
